@@ -101,6 +101,7 @@ static gchar* gst_cenc_create_uuid_string (gconstpointer uuid_bytes);
 #define M_MPD_PROTECTION_ID "5e629af5-38da-4063-8977-97ffbd9902d4"
 #define M_PSSH_PROTECTION_ID "69f908af-4816-46ea-910c-cd5dcccb0a3a"
 #define CLEARKEY_PROTECTION_ID "e2719d58-a985-b3c9-781a-b030af78d30e"
+#define WIDEVINE_PROTECTION_ID "edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
 
 /* pad templates */
 
@@ -112,7 +113,8 @@ static GstStaticPadTemplate gst_cenc_decrypt_sink_template =
     (
      "application/x-cenc, protection-system=(string)" CLEARKEY_PROTECTION_ID "; "
      "application/x-cenc, protection-system=(string)" M_MPD_PROTECTION_ID "; "
-     "application/x-cenc, protection-system=(string)" M_PSSH_PROTECTION_ID)
+     "application/x-cenc, protection-system=(string)" M_PSSH_PROTECTION_ID "; "
+     "application/x-cenc, protection-system=(string)" WIDEVINE_PROTECTION_ID)
     );
 
 static GstStaticPadTemplate gst_cenc_decrypt_src_template =
@@ -127,6 +129,7 @@ static const gchar* gst_cenc_decrypt_protection_ids[] = {
   CLEARKEY_PROTECTION_ID,
   M_MPD_PROTECTION_ID,
   M_PSSH_PROTECTION_ID,
+  WIDEVINE_PROTECTION_ID,
   NULL
 };
 
@@ -150,7 +153,7 @@ gst_cenc_decrypt_class_init (GstCencDecryptClass * klass)
   gst_element_class_add_pad_template (element_class,
       gst_static_pad_template_get (&gst_cenc_decrypt_src_template));
 
-  gst_element_class_set_static_metadata (element_class,
+  gst_element_class_set_metadata (element_class,
       "Decrypt content encrypted using ISOBMFF Common Encryption",
       GST_ELEMENT_FACTORY_KLASS_DECRYPTOR,
       "Decrypts media that has been encrypted using ISOBMFF Common Encryption.",
@@ -195,7 +198,6 @@ gst_cenc_decrypt_dispose (GObject * object)
     g_ptr_array_unref (self->keys);
     self->keys = NULL;
   }
-
   G_OBJECT_CLASS (parent_class)->dispose (object);
 }
 
@@ -873,6 +875,8 @@ gst_cenc_decrypt_sink_event_handler (GstBaseTransform * trans, GstEvent * event)
           GST_DEBUG_OBJECT (self, "event carries pssh data from qtdemux");
           self->drm_type = GST_DRM_MARLIN;
           gst_cenc_decrypt_parse_pssh_box (self, pssi);
+        } else {
+          GST_DEBUG_OBJECT(self, "Unrecognized form %s on system id %s", loc, system_id);
         }
         gst_event_unref (event);
       break;
